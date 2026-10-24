@@ -1,0 +1,1300 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DDX Fitness · Гостевой день по QR · прототип</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Oswald:wght@500;600&display=swap" rel="stylesheet">
+<!-- Настоящий QR. Если библиотека не загрузится, прототип нарисует условный узор -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<style>
+  /* ───────── Цвета: страница вокруг телефонов и бренд DDX ───────── */
+  :root{
+    --bg:#E6E9EC; --chrome:#FFFFFF; --ink:#15181C; --muted:#69717A; --line:#D3D8DD;
+    --app:#F3F5F6; --card:#FFFFFF; --teal:#0E474C; --teal2:#16656C; --cyan:#3DD2D6; --mint:#E6F3F1;
+    --txt:#1A1F23; --sub:#78828A; --orange:#F4732A; --red:#E5484D; --green:#2BB673; --tg:#3390EC;
+    --s:1; --toph:60px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Manrope",-apple-system,"Segoe UI",Arial,sans-serif;overflow:hidden}
+  button,select,input{font:inherit;color:inherit}
+  button{cursor:pointer;border:0;background:none;padding:0;text-align:inherit}
+  button[disabled]{cursor:default}
+  button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+
+  /* ───────── Верхняя панель ───────── */
+  .top{height:60px;display:flex;align-items:center;gap:20px;padding:0 24px;background:var(--chrome);border-bottom:1px solid var(--line);position:relative;z-index:60}
+  .brand{flex:1;min-width:0}
+  .brand b{display:block;font-size:15.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .brand small{display:block;font-size:12.5px;color:var(--muted);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ctrl{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700;color:var(--muted)}
+  .ctrl select{height:36px;border:1px solid var(--line);border-radius:10px;padding:0 34px 0 12px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%2369717A' stroke-width='1.8'/%3E%3C/svg%3E") no-repeat right 12px center;color:var(--ink);font-weight:600;appearance:none;-webkit-appearance:none;cursor:pointer;max-width:260px;text-overflow:ellipsis}
+  .ctrl .reset{height:36px;padding:0 14px;border-radius:10px;background:var(--ink);color:#fff;font-weight:700;font-size:13px;white-space:nowrap}
+  .roles{display:none;background:#EEF0F2;border-radius:11px;padding:3px;gap:2px;flex:none}
+  .roles button{height:32px;padding:0 14px;border-radius:9px;font-size:13.5px;font-weight:700;color:var(--muted);position:relative;white-space:nowrap}
+  .roles button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+  .roles button.dot:after{content:"";position:absolute;top:5px;right:5px;width:8px;height:8px;border-radius:50%;background:var(--red)}
+
+  /* ───────── Сцена: два телефона и подписи ───────── */
+  .stage{height:calc(100% - var(--toph));display:flex;align-items:center;justify-content:center;gap:40px;padding:16px 24px}
+  .device{display:flex;align-items:center;gap:22px}
+  .side{width:180px;display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+  #dm .side{align-items:flex-end;text-align:right}
+  .side .role{font-size:20px;font-weight:800;letter-spacing:-.01em}
+  .side .rsub{font-size:13px;color:var(--muted);font-weight:500;margin-top:-8px;line-height:1.35}
+  .where{background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 12px;font-size:12.5px;font-weight:700;line-height:1.35}
+  .where small{display:block;font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:2px}
+  .where.err{border-color:#F1B2B4;color:var(--red)}
+  .outside{display:flex;flex-direction:column;gap:8px;width:100%}
+  .out{width:100%;text-align:left;border:1.5px dashed #8E98A1;border-radius:14px;padding:10px 12px;background:rgba(255,255,255,.6);font-size:13px;font-weight:700;line-height:1.35;transition:background .15s,border-color .15s}
+  .out:hover{background:#fff;border-color:var(--teal)}
+  .out small{display:block;font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
+
+  .slot{width:calc(397px * var(--s));height:calc(780px * var(--s));position:relative;flex:none}
+  .phone{position:absolute;left:0;top:0;width:397px;height:780px;transform:scale(var(--s));transform-origin:0 0;border-radius:60px;background:#121417;padding:11px;box-shadow:inset 0 0 0 1.5px #3A3F45,0 30px 60px rgba(20,30,40,.25)}
+  .phone.ping{animation:ping 1.3s ease-out}
+  @keyframes ping{0%{box-shadow:inset 0 0 0 1.5px #3A3F45,0 30px 60px rgba(20,30,40,.25),0 0 0 0 rgba(61,210,214,.8)}100%{box-shadow:inset 0 0 0 1.5px #3A3F45,0 30px 60px rgba(20,30,40,.25),0 0 0 30px rgba(61,210,214,0)}}
+  .island{position:absolute;top:22px;left:50%;transform:translateX(-50%);width:112px;height:32px;border-radius:20px;background:#000;z-index:40}
+  .screen{position:relative;width:100%;height:100%;border-radius:49px;overflow:hidden;background:var(--app);color:var(--txt);isolation:isolate;user-select:none;-webkit-user-select:none}
+  .screen input{user-select:text;-webkit-user-select:text}
+
+  /* ───────── Общие элементы экранов ───────── */
+  .view{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--app)}
+  .view.enter{animation:vin .26s ease}
+  @keyframes vin{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+  .status{height:54px;flex:none;display:flex;justify-content:space-between;align-items:center;padding:8px 30px 0 36px;font-size:15px;font-weight:700;font-family:-apple-system,"SF Pro Text","Manrope",sans-serif}
+  .status svg{height:12px;width:auto;fill:currentColor}
+  .body{flex:1;overflow-y:auto;padding:4px 20px 28px;scrollbar-width:none}
+  .body::-webkit-scrollbar{display:none}
+  .pad-tabs{padding-bottom:160px}
+  .hb{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:#111;z-index:45;pointer-events:none}
+  .lockv .hb{background:#fff}
+
+  .h{font-family:"Oswald","Bebas Neue",Impact,sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:.005em;line-height:1.04;font-size:30px;margin:10px 0 6px}
+  .h.md{font-size:23px}
+  .h.sm{font-size:19px}
+  .h.white{color:#fff;margin:0}
+  .p{color:var(--sub);font-size:14px;line-height:1.45;font-weight:500;margin:4px 0 12px}
+  .small{font-size:12.5px}
+  .center{text-align:center}
+  .row{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .card{background:var(--card);border-radius:20px;padding:14px 16px;margin:10px 0;box-shadow:0 1px 2px rgba(16,24,32,.05)}
+  .card .t{font-weight:700;font-size:15px}
+  .card .s{color:var(--sub);font-size:13px;margin-top:3px;font-weight:500;line-height:1.4}
+  .card.teal{background:var(--teal);color:#fff}
+  .card.teal .s{color:#CFE4E3}
+  .card.mint{background:var(--mint);box-shadow:none}
+  .card.qrcard{display:flex;flex-direction:column;align-items:center;padding:16px 18px}
+  .card.qrcard .s{text-align:center}
+  .btn{display:block;width:100%;text-align:center;border-radius:999px;padding:15px 12px;font-weight:700;font-size:15px;margin-top:10px;background:var(--teal);color:#fff;transition:transform .08s,filter .15s}
+  .btn:hover{filter:brightness(1.1)}
+  .btn:active{transform:scale(.98)}
+  .btn.ghost{background:#fff;color:var(--teal);box-shadow:inset 0 0 0 1.5px var(--cyan)}
+  .btn.ghost.done{background:var(--mint);box-shadow:none}
+  .btn.white{display:inline-block;width:auto;background:#fff;color:var(--teal);padding:11px 22px}
+  .btn.tg{background:var(--tg)}
+  .btn.tg svg,.btn.tgo svg{width:17px;height:17px;fill:currentColor;vertical-align:-3px;margin-right:6px}
+  .btn.tgo{background:#fff;color:var(--tg);box-shadow:inset 0 0 0 1.5px var(--tg);padding:11px 12px;margin:4px 0 6px}
+  .btn.plain{background:none;color:var(--sub);padding:12px;margin-top:2px}
+  .back{font-size:15px;font-weight:700;color:var(--teal);margin:2px 0 0;padding:4px 0}
+  .spin{display:inline-block;width:15px;height:15px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px;margin-right:8px}
+  .spin.dark{width:38px;height:38px;border-width:3px;border-color:rgba(14,71,76,.15);border-top-color:var(--teal);margin:0}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes fade{from{opacity:0}}
+  @keyframes up{from{transform:translateY(100%)}}
+  @keyframes pop{from{opacity:0;transform:scale(.94)}}
+
+  .logo{font-family:"Oswald",Impact,sans-serif;font-weight:600;font-size:27px;letter-spacing:.01em;color:var(--cyan);line-height:1;white-space:nowrap}
+  .logo b{color:var(--orange);font-weight:600}
+  .bell{width:40px;height:40px;border-radius:50%;border:1.5px solid #D5D9DD;display:flex;align-items:center;justify-content:center}
+  .bell svg{width:19px;height:19px;fill:none;stroke:var(--txt);stroke-width:1.8}
+  .stories{display:flex;gap:10px;margin:14px 0 4px}
+  .story{width:72px;height:72px;border-radius:21px;padding:3px;border:2px solid var(--cyan);flex:none}
+  .story span{display:flex;align-items:flex-end;width:100%;height:100%;border-radius:16px;padding:7px;font-size:9.5px;font-weight:800;text-transform:uppercase;line-height:1.1;color:#fff;text-align:left}
+  .story.a span{background:linear-gradient(160deg,#F4732A,#E23B7A)}
+  .story.b span{background:linear-gradient(160deg,#16656C,#0E474C)}
+  .story.c span{background:linear-gradient(160deg,#3DD2D6,#0E474C)}
+  .story.d{border-color:#CFE4E3}.story.d span{background:#E3E9EB;color:var(--teal)}
+  .promo{background:linear-gradient(125deg,#0E474C,#16656C);color:#fff;border-radius:24px;padding:18px 18px 16px;margin:12px 0;position:relative;overflow:hidden}
+  .promo:before{content:"";position:absolute;right:-46px;top:-46px;width:170px;height:170px;border-radius:50%;background:rgba(61,210,214,.2)}
+  .promo .h{position:relative;color:#fff;margin:0 0 6px;max-width:250px}
+  .promo .s{position:relative;font-size:13.5px;color:#CFE4E3;font-weight:500;max-width:250px;line-height:1.4}
+  .promo .btn{position:relative;z-index:1;margin-top:14px}
+  .days{display:flex;gap:6px;margin:8px 0}
+  .day{flex:1;height:58px;border-radius:18px;border:1.5px solid #D5D9DD;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;color:var(--sub);font-weight:600;gap:1px}
+  .day b{font-size:16px;color:var(--txt)}
+  .day.on{background:var(--teal);border-color:var(--teal);color:#CFE4E3}
+  .day.on b{color:#fff}
+  .pass-pill{position:absolute;left:50%;transform:translateX(-50%);bottom:100px;background:var(--teal);color:#fff;border-radius:999px;padding:13px 22px;font-weight:700;font-size:14.5px;box-shadow:0 10px 22px rgba(14,71,76,.35);display:flex;gap:8px;align-items:center;z-index:5;white-space:nowrap}
+  .pass-pill svg{width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2}
+  .tabs{position:absolute;left:0;right:0;bottom:0;height:88px;background:#fff;border-top:1px solid #E6E9EC;display:flex;justify-content:space-around;align-items:flex-start;padding-top:10px;z-index:4}
+  .tabs button{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--sub);width:66px}
+  .tabs svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .tabs .on{color:var(--teal)}
+
+  /* Мини-приложение DDX внутри Telegram */
+  .wa-bar{flex:none;height:50px;display:flex;align-items:center;padding:0 16px;background:#fff;border-bottom:1px solid #ECEEF0;gap:8px}
+  .wa-x{color:#2481CC;font-size:15.5px;font-weight:600;width:76px;text-align:left}
+  .wa-t{flex:1;text-align:center;line-height:1}
+  .wa-t .logo{font-size:18px}
+  .wa-t small{display:block;font-size:11px;color:var(--sub);font-weight:600;margin-top:3px}
+  .wa-m{width:76px;text-align:right;font-size:20px;color:#2481CC;font-weight:800;letter-spacing:1px}
+
+  .field{display:block;background:#fff;border-radius:16px;padding:9px 14px 8px;margin:8px 0;border:1.5px solid #E3E7EA;cursor:text}
+  .field span{display:block;font-size:12px;color:var(--sub);font-weight:600}
+  .field input,.field select{width:100%;border:0;outline:0;background:transparent;font-size:16px;font-weight:700;padding:2px 0;appearance:none;-webkit-appearance:none;color:var(--txt)}
+  .field input::placeholder{color:#B4BBC1;font-weight:600}
+  .field select{cursor:pointer}
+  .field:focus-within{border-color:var(--cyan)}
+  .field.bad{border-color:var(--red)}
+  .field.flash{animation:flash 1.2s ease}
+  @keyframes flash{0%,40%{background:var(--mint);border-color:var(--cyan)}}
+  .ferr{color:var(--red);font-size:12.5px;font-weight:600;margin:-3px 0 6px 4px}
+  .lbl{font-size:13px;color:var(--sub);font-weight:700;margin:14px 0 4px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}
+  .chip{border:1.5px solid #D5DADE;border-radius:999px;padding:8px 15px;font-size:14px;font-weight:700;background:#fff}
+  .chip.on{background:var(--teal);border-color:var(--teal);color:#fff}
+  .chips.slots{flex-wrap:nowrap;gap:6px}
+  .chip.tslot{flex:1;display:flex;flex-direction:column;align-items:center;padding:7px 0 6px;border-radius:16px;line-height:1.2}
+  .chip.tslot small{font-size:10.5px;font-weight:700;color:var(--green)}
+  .chip.tslot small.few{color:var(--orange)}
+  .chip.tslot small.none{color:var(--red)}
+  .chip.tslot.on small{color:#CFE4E3}
+  .chip.tslot[disabled]{opacity:.5}
+  .chip.tslot[disabled] b{text-decoration:line-through}
+  .check{display:flex;gap:10px;align-items:center;font-size:14px;font-weight:600;color:var(--sub);margin:14px 0 4px}
+  .check i{width:22px;height:22px;border-radius:7px;border:2px solid #C7CDD2;display:flex;align-items:center;justify-content:center;flex:none}
+  .check.on i{background:var(--teal);border-color:var(--teal)}
+  .check.on i:after{content:"";width:10px;height:5px;border:2.5px solid #fff;border-top:0;border-right:0;transform:rotate(-45deg) translate(1px,-1px)}
+
+  .qr{background:#fff;border-radius:16px;padding:12px;line-height:0;margin:2px 0 10px}
+  .price{font-size:28px;font-weight:800;margin-top:10px}
+  .price s{font-size:15px;color:#9FC7C5;font-weight:600;margin-left:8px}
+  .stars{display:flex;gap:6px;margin:6px 0 0}
+  .stars button{font-size:42px;line-height:1;color:#D5D9DD;transition:color .12s}
+  .stars button.on{color:var(--cyan)}
+  .radio{display:flex;justify-content:space-between;align-items:center;width:100%;background:#fff;border-radius:18px;padding:13px 16px;margin:8px 0;border:1.5px solid #E3E7EA;text-align:left}
+  .radio b{display:block;font-size:15.5px}
+  .radio small{display:block;font-size:13px;color:var(--sub);font-weight:600;margin-top:2px}
+  .radio i{width:22px;height:22px;border-radius:50%;border:2px solid #C7CDD2;flex:none}
+  .radio.on{border-color:var(--cyan)}
+  .radio.on i{border:7px solid var(--teal)}
+  .ring{width:78px;height:78px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;position:relative}
+  .ring:before{content:"";position:absolute;inset:7px;border-radius:50%;background:var(--teal)}
+  .ring span{position:relative;font-family:"Oswald",Impact,sans-serif;font-size:25px;font-weight:600;line-height:1;text-align:center}
+  .ring small{display:block;font-family:"Manrope",sans-serif;font-size:10px;font-weight:600;color:#CFE4E3;margin-top:2px}
+  .load{display:flex;gap:4px;align-items:flex-end;height:34px;margin:10px 0 2px}
+  .load i{flex:1;background:#BDEFF0;border-radius:5px}
+  .load i.h{background:var(--cyan)}
+  .load i.x{background:var(--teal)}
+  .coach{width:46px;height:46px;border-radius:50%;background:linear-gradient(150deg,#7FD8DA,#0E474C);flex:none}
+  .avatar{width:46px;height:46px;border-radius:50%;background:linear-gradient(150deg,#F4A26B,#E85BC5);flex:none}
+  .me{justify-content:flex-start;margin:10px 0 4px;font-size:18px}
+  .ok-t{color:var(--teal)!important;font-weight:700!important}
+
+  /* Прогресс приглашения у участника */
+  .steps{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:14px}
+  .steps li{display:flex;gap:12px;align-items:flex-start;color:var(--sub);line-height:1.3}
+  .steps li:before{content:"";width:22px;height:22px;border-radius:50%;border:2px solid #C7CDD2;flex:none;box-sizing:border-box;margin-top:1px}
+  .steps li b{display:block;font-size:15px}
+  .steps li small{display:block;font-size:12.5px;font-weight:600;margin-top:2px}
+  .steps li.ok{color:var(--txt)}
+  .steps li.ok small{color:var(--sub)}
+  .steps li.ok:before{border-color:var(--teal);background:var(--teal) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='9'%3E%3Cpath d='M1 4.5l3.2 3L11 1' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E") center no-repeat;animation:pop .35s}
+  .steps li.cur{color:var(--txt)}
+  .steps li.cur:before{border-color:var(--cyan);animation:halo 1.6s ease-out infinite}
+  .steps li.warn small{color:var(--red)}
+  @keyframes halo{0%{box-shadow:0 0 0 0 rgba(61,210,214,.55)}100%{box-shadow:0 0 0 9px rgba(61,210,214,0)}}
+
+  /* ───────── Шторки: оплата, контакт из Telegram ───────── */
+  .sheet-bg{position:absolute;inset:0;background:rgba(0,0,0,.38);z-index:30}
+  .sheet-bg.fresh{animation:fade .25s}
+  .sheet{position:absolute;left:0;right:0;bottom:0;z-index:31;background:#fff;border-radius:26px 26px 0 0;padding:10px 20px 36px;box-shadow:0 -10px 30px rgba(0,0,0,.15)}
+  .sheet.fresh{animation:up .35s cubic-bezier(.2,.9,.3,1)}
+  .grab{width:40px;height:5px;border-radius:3px;background:#D5D9DD;margin:0 auto 14px}
+  .sh-h{font-size:17px;font-weight:800;text-align:center}
+  .sh-sum{font-size:34px;font-weight:800;text-align:center;margin-top:6px}
+  .sh-sub{font-size:13.5px;color:var(--sub);text-align:center;margin:4px 0 14px;font-weight:600;line-height:1.4}
+  .sh-l{font-size:12.5px;color:var(--sub);font-weight:700;margin:6px 0 2px}
+  .sh-ic{width:58px;height:58px;border-radius:50%;background:var(--tg);display:flex;align-items:center;justify-content:center;margin:2px auto 10px}
+  .sh-ic svg{width:28px;height:28px;fill:#fff}
+  .bank{display:flex;align-items:center;gap:12px;width:100%;padding:11px 2px;border-bottom:1px solid #EEF0F2;font-size:15.5px;font-weight:700}
+  .bank i{width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;color:#fff;font-style:normal;font-weight:800;font-size:15px}
+  .bank span{margin-left:auto;color:#B4BBC1;font-size:22px;font-weight:500}
+  .contact{display:flex;gap:12px;align-items:center;background:#F3F5F6;border-radius:16px;padding:10px 12px;margin:4px 0 4px;text-align:left}
+  .contact .av{width:42px;height:42px;border-radius:50%;background:linear-gradient(150deg,#F4A26B,#E85BC5);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none}
+  .contact .av.mir{width:54px;border-radius:10px;background:linear-gradient(135deg,#0F754E,#1A9F67);font-size:12px;letter-spacing:.04em}
+  .contact b{display:block;font-size:15.5px}
+  .contact small{color:var(--sub);font-size:13px;font-weight:600}
+  .sched{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:4px 0}
+  .sched div{background:#F3F5F6;border-radius:12px;padding:9px 4px;text-align:center}
+  .sched b{display:block;font-size:13.5px}
+  .sched small{font-size:11px;color:var(--sub);font-weight:600}
+  .sh-state{display:flex;flex-direction:column;align-items:center;gap:8px;padding:26px 0 18px;text-align:center}
+  .sh-state b{font-size:17px}
+  .sh-state small{color:var(--sub);font-size:13.5px;font-weight:600}
+  .tick{width:66px;height:66px;border-radius:50%;background:var(--green);position:relative;animation:pop .35s cubic-bezier(.2,.9,.3,1.4)}
+  .tick:after{content:"";position:absolute;left:24px;top:14px;width:15px;height:28px;border:solid #fff;border-width:0 5px 5px 0;transform:rotate(45deg)}
+
+  /* ───────── Wallet ───────── */
+  .wallet{position:absolute;inset:0;z-index:35;background:#1C1C1E;color:#fff;display:flex;flex-direction:column;padding:58px 16px 30px}
+  .wallet.fresh{animation:up .4s cubic-bezier(.2,.9,.3,1)}
+  .w-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;font-size:16px}
+  .w-top b{font-size:16px}
+  .w-top button{color:#0A84FF;font-weight:600;width:96px}
+  .w-top button:last-child{font-weight:800;text-align:right}
+  .pass{background:linear-gradient(160deg,#16656C,#0E474C);border-radius:16px;padding:16px 18px 14px;box-shadow:0 20px 40px rgba(0,0,0,.4)}
+  .wallet.adding .pass{animation:toWallet .6s cubic-bezier(.5,0,.75,0) forwards}
+  @keyframes toWallet{to{transform:translateY(440px) scale(.55);opacity:0}}
+  .pass-h{display:flex;justify-content:space-between;align-items:flex-start}
+  .pass-h .logo{font-size:22px}
+  .pass-k{font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:#CFE4E3;text-align:right;line-height:1.3}
+  .pass-f{display:flex;justify-content:space-between;margin-top:14px;font-size:16px;font-weight:700}
+  .pass-f div:last-child{text-align:right}
+  .pass-f small{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#9FC7C5;font-weight:700;margin-bottom:2px}
+  .pass-qr{display:flex;justify-content:center;margin-top:16px}
+  .pass-n{text-align:center;font-size:12px;color:#CFE4E3;font-weight:600}
+
+  /* ───────── Экран блокировки и пуши ───────── */
+  .lockv{background:radial-gradient(130% 75% at 50% 0%,#33476A 0%,#141A24 62%,#0B0E14 100%);color:#fff}
+  .lk-date{text-align:center;font-size:19px;font-weight:600;margin-top:14px;opacity:.92}
+  .lk-clock{text-align:center;font-size:90px;font-weight:700;letter-spacing:-.03em;line-height:1;margin-top:2px;font-family:-apple-system,"SF Pro Display","Manrope",sans-serif}
+  .pushes{padding:28px 12px 0;display:flex;flex-direction:column;gap:8px}
+  .lk-empty{text-align:center;margin-top:30px;font-size:14px;opacity:.5}
+  .lk-tools{position:absolute;bottom:40px;left:46px;right:46px;display:flex;justify-content:space-between}
+  .lk-tools span{width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.16)}
+  .push{display:flex;gap:11px;width:100%;text-align:left;background:rgba(255,255,255,.18);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-radius:22px;padding:12px 14px;color:#fff;animation:pin .5s cubic-bezier(.2,.9,.3,1.2)}
+  .push.old{opacity:.55;animation:none}
+  @keyframes pin{from{opacity:0;transform:translateY(-14px) scale(.96)}}
+  .ai{width:38px;height:38px;border-radius:10px;flex:none;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;color:#fff}
+  .ai.ddx{background:var(--orange)}
+  .ai.tgi{background:linear-gradient(#37AEE2,#1E96C8)}
+  .ai.tgi svg{width:20px;height:20px;fill:#fff}
+  .pt{flex:1;min-width:0;font-size:14px;line-height:1.35}
+  .ph{display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-bottom:1px}
+  .ph span{opacity:.6;font-weight:500}
+  .banner{position:absolute;top:56px;left:10px;right:10px;z-index:42;display:flex;gap:11px;text-align:left;background:rgba(255,255,255,.97);border-radius:22px;padding:12px 14px;box-shadow:0 14px 34px rgba(0,0,0,.22);color:var(--txt);animation:drop .5s cubic-bezier(.2,.9,.3,1.15)}
+  @keyframes drop{from{transform:translateY(-130%);opacity:0}}
+
+  /* ───────── Telegram ───────── */
+  .tgv{background:#fff}
+  .tgv .status{background:#F7F7F7}
+  .tg-nav{flex:none;height:52px;background:#F7F7F7;border-bottom:.5px solid #D2D2D6;display:flex;align-items:center;padding:0 12px;gap:8px}
+  .tg-nav .bk{color:#2481CC;font-size:16px;font-weight:500;width:74px}
+  .tg-nav .who{flex:1;text-align:center;line-height:1.15}
+  .tg-nav .who b{display:block;font-size:16px;color:#000}
+  .tg-nav .who small{font-size:12.5px;color:#8E8E93}
+  .tg-nav .av{width:38px;height:38px;border-radius:50%;background:linear-gradient(#72D5FD,#2A9EF1);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:16px;margin-left:36px}
+  .tg-body{flex:1;overflow-y:auto;padding:10px 10px 14px;display:flex;flex-direction:column;scrollbar-width:none;background:
+      radial-gradient(rgba(255,255,255,.35) 1.6px,transparent 2.2px) 0 0/22px 22px,
+      linear-gradient(160deg,#D5E3C7,#B9D3B0)}
+  .tg-body::-webkit-scrollbar{display:none}
+  .tg-body>:first-child{margin-top:auto}
+  .tg-date{align-self:center;background:rgba(0,0,0,.2);color:#fff;border-radius:12px;padding:3px 10px;font-size:12.5px;font-weight:600;margin:8px 0}
+  .bub{max-width:285px;background:#fff;border-radius:18px 18px 18px 6px;padding:8px 11px 6px;font-size:15px;line-height:1.35;box-shadow:0 1px 1px rgba(0,0,0,.1);margin:3px 0;color:#000;align-self:flex-start}
+  .bub.new{animation:pin .45s ease}
+  .bub .prev{border-left:3px solid #2481CC;padding:2px 0 2px 9px;margin-top:7px;font-size:14px}
+  .bub .prev>b{color:#2481CC;display:block}
+  .bub .img{height:112px;border-radius:8px;margin:7px 0 2px;padding:12px 14px;display:flex;flex-direction:column;justify-content:space-between;color:#fff;background:radial-gradient(circle at 88% 18%,rgba(61,210,214,.5) 0 40px,transparent 41px),radial-gradient(circle at 70% 120%,rgba(244,115,42,.55) 0 34px,transparent 35px),linear-gradient(120deg,#0E474C,#16656C)}
+  .bub .img .logo{font-size:15px}
+  .bub .img em{font-style:normal;font-family:"Oswald",Impact,sans-serif;font-weight:600;font-size:27px;text-transform:uppercase;line-height:.95;max-width:150px}
+  .bub .tm{font-size:11.5px;color:#8E8E93;text-align:right;margin-top:2px}
+  .bub .open{display:block;width:calc(100% + 22px);margin:8px -11px -6px;border-top:1px solid #E5E5EA;padding:10px 0 11px;color:#2481CC;font-weight:700;font-size:15px;text-align:center}
+  .tg-in{flex:none;height:74px;background:#F7F7F7;border-top:.5px solid #D2D2D6;display:flex;align-items:flex-start;gap:10px;padding:10px 12px 0}
+  .tg-in .inp{flex:1;height:36px;border-radius:18px;background:#fff;border:1px solid #DADADF;padding:0 14px;display:flex;align-items:center;color:#9A9AA0;font-size:15px}
+  .tg-in .ic{width:30px;height:30px;border-radius:50%;border:2px solid #9A9AA0;margin-top:3px}
+
+  /* ───────── Физические точки: сцена поверх телефона ───────── */
+  .scene{position:absolute;inset:0;border-radius:60px;background:rgba(9,20,22,.6);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:50;padding:22px}
+  .scene.on{display:flex;animation:fade .25s ease}
+  .phys{width:100%;background:var(--teal);color:#fff;border-radius:28px;padding:24px 22px 20px;box-shadow:0 24px 50px rgba(0,0,0,.35);animation:pop .35s cubic-bezier(.2,.9,.3,1.2)}
+  .phys .kind{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--cyan);font-weight:800}
+  .phys .h{color:#fff;margin:8px 0 6px}
+  .phys .p{color:#CFE4E3;margin-bottom:6px}
+  .phys .btn{background:#fff;color:var(--teal);margin-top:14px}
+  .phys .after{opacity:0;visibility:hidden;animation:show .4s 1.45s forwards}
+  @keyframes show{to{opacity:1;visibility:visible}}
+  /* турникет: телефон подносят к считывателю, загорается зелёный, створки уходят */
+  .tstile{position:relative;height:150px;margin:16px 0 4px}
+  .tstile .cab{position:absolute;bottom:0;width:48px;height:96px;border-radius:12px 12px 4px 4px;background:#1B6E75}
+  .tstile .cab.l{left:calc(50% - 120px)}
+  .tstile .cab.r{right:calc(50% - 120px)}
+  .tstile .flap{position:absolute;bottom:42px;height:36px;width:72px;background:rgba(61,210,214,.45);border:2px solid var(--cyan);border-radius:8px}
+  .tstile .flap.l{left:calc(50% - 72px);transform-origin:left center;animation:retract .5s 1.15s ease forwards}
+  .tstile .flap.r{right:calc(50% - 72px);transform-origin:right center;animation:retract .5s 1.15s ease forwards}
+  @keyframes retract{to{transform:scaleX(.08);opacity:.5}}
+  .tstile .reader{position:absolute;left:calc(50% - 124px);bottom:96px;width:56px;height:30px;border-radius:8px;background:#0A3236;border:2px solid #2A8C93;display:flex;align-items:center;justify-content:center}
+  .tstile .reader em{width:26px;height:7px;border-radius:4px;background:#CFE4E3;animation:led .25s .9s forwards}
+  @keyframes led{to{background:#4BE38A;box-shadow:0 0 12px 3px rgba(75,227,138,.8)}}
+  .tstile .beep{position:absolute;left:calc(50% - 102px);bottom:105px;width:12px;height:12px;border-radius:50%;border:2px solid #4BE38A;opacity:0;animation:beep .8s .9s ease-out}
+  @keyframes beep{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(7)}}
+  .tstile .mph{position:absolute;left:calc(50% + 40px);top:0;width:34px;height:58px;border-radius:8px;background:#fff;border:3px solid #0A3236;animation:tap .85s .1s cubic-bezier(.4,0,.2,1) forwards}
+  .tstile .mph u{position:absolute;inset:9px 5px;background:repeating-conic-gradient(#0E474C 0 25%,#fff 0 50%) 0 0/8px 8px}
+  @keyframes tap{to{transform:translate(-153px,8px) rotate(-12deg)}}
+  .dumb{height:110px;position:relative;margin:14px 0 6px;animation:lift 1.1s ease-in-out infinite alternate}
+  .dumb b{position:absolute;left:70px;right:70px;top:50px;height:12px;border-radius:6px;background:#1B6E75}
+  .dumb i{position:absolute;top:22px;width:30px;height:68px;border-radius:8px;background:var(--cyan)}
+  .dumb i.l{left:50px}.dumb i.r{right:50px}
+  @keyframes lift{to{transform:translateY(-9px)}}
+  .bar{height:8px;border-radius:4px;background:rgba(255,255,255,.18);overflow:hidden;margin:12px 0 2px}
+  .bar i{display:block;height:100%;width:0;background:var(--cyan);animation:fill 2.6s ease forwards}
+  @keyframes fill{to{width:100%}}
+
+  /* ───────── Связь телефонов: полёт события и «прошло время» ───────── */
+  #fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:65}
+  #fx path{fill:none;stroke-width:2.5;stroke-linecap:round;opacity:.55}
+  #fx path.tg{stroke:var(--tg)}
+  #fx path.ddx{stroke:var(--orange)}
+  .flyer{position:fixed;left:0;top:0;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;z-index:66;pointer-events:none;box-shadow:0 8px 20px rgba(0,0,0,.25);color:#fff;font-weight:800;font-size:11px}
+  .flyer.tg{background:var(--tg)}
+  .flyer.tg svg{width:22px;height:22px;fill:#fff}
+  .flyer.ddx{background:var(--orange)}
+  .timejump{position:fixed;left:0;right:0;bottom:0;top:var(--toph);z-index:70;display:flex;align-items:center;justify-content:center;background:rgba(230,233,236,.55);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);opacity:0;pointer-events:none;transition:opacity .3s}
+  .timejump.on{opacity:1;pointer-events:auto;cursor:pointer}
+  .tj{background:#15181C;color:#fff;border-radius:22px;padding:18px 30px 16px;text-align:center;box-shadow:0 24px 50px rgba(0,0,0,.3);transform:scale(.92);transition:transform .35s cubic-bezier(.2,.9,.3,1.2)}
+  .timejump.on .tj{transform:none}
+  .tj small{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--cyan);font-weight:800}
+  .tj b{display:block;font-family:"Oswald",Impact,sans-serif;font-weight:600;font-size:34px;text-transform:uppercase;margin:6px 0 2px;letter-spacing:.01em}
+  .tj span{font-size:14px;color:#B9C0CC;font-weight:600}
+
+  /* ───────── Подсказки внизу страницы ───────── */
+  .toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,16px);background:#16191D;color:#fff;padding:11px 18px;border-radius:14px;font-size:14px;font-weight:600;line-height:1.4;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;width:max-content;max-width:min(560px,calc(100vw - 32px));text-align:center;z-index:100;box-shadow:0 12px 30px rgba(0,0,0,.25)}
+  .toast.on{opacity:1;transform:translate(-50%,0)}
+
+  /* ───────── Узкий экран: один телефон и переключатель ролей ───────── */
+  @media (max-width:1079px){
+    .roles{display:flex}
+    .stage{gap:0}
+    .device{display:none;flex-direction:column;gap:14px}
+    .device.active{display:flex}
+    #dm .side{order:2}
+    .side,#dm .side{width:calc(397px * var(--s));align-items:center;text-align:center}
+    .side .role,.side .rsub{display:none}
+    .out{text-align:center}
+  }
+
+  /* ───────── Телефон: экран на всю ширину, без рамки ───────── */
+  @media (max-width:539px){
+    .top{height:auto;padding:8px 10px;gap:8px}
+    .brand,.ctrl label{display:none}
+    .ctrl{gap:6px;margin-left:auto;min-width:0}
+    .ctrl select{max-width:44vw;height:34px;font-size:13px}
+    .ctrl .reset{height:34px;padding:0 10px}
+    .roles button{padding:0 10px}
+    .stage{display:block;padding:0;height:calc(100% - var(--toph))}
+    .device.active{display:block;height:100%}
+    .slot{width:100%;height:100%}
+    .phone{inset:0;width:auto;height:auto;transform:none;border-radius:0;padding:0;box-shadow:none;background:var(--app)}
+    .phone.ping{animation:none}
+    .screen,.scene{border-radius:0}
+    .island,.status,.hb{display:none}
+    .body{padding-top:12px}
+    .lk-date{margin-top:40px}
+    .banner{top:10px}
+    .wallet{padding-top:18px}
+    .side,#dm .side{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));width:auto;z-index:50}
+    .where{display:none}
+    .out{background:#fff;border-style:solid;border-color:var(--teal);box-shadow:0 10px 26px rgba(0,0,0,.18)}
+    .body.has-out{padding-bottom:120px}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <b>DDX Fitness · Гостевой день по QR</b>
+    <small>Учебный прототип: фича придумана для примера и не связана с DDX Fitness</small>
+  </div>
+  <div class="roles">
+    <button data-role="dm">Dmitry</button>
+    <button data-role="an">Аня</button>
+  </div>
+  <div class="ctrl">
+    <label for="scenario"><span>Сценарий</span></label>
+    <select id="scenario"></select>
+    <button class="reset" id="reset">Сначала</button>
+  </div>
+</header>
+
+<main class="stage">
+  <section class="device" id="dm">
+    <aside class="side">
+      <div class="role">Dmitry</div>
+      <div class="rsub">участник клуба, зовёт друга</div>
+      <div class="where"></div>
+      <div class="outside"></div>
+    </aside>
+    <div class="slot"><div class="phone"><div class="island"></div><div class="screen"></div><div class="scene"></div></div></div>
+  </section>
+  <section class="device" id="an">
+    <div class="slot"><div class="phone"><div class="island"></div><div class="screen"></div><div class="scene"></div></div></div>
+    <aside class="side">
+      <div class="role">Аня</div>
+      <div class="rsub">друг, получает приглашение</div>
+      <div class="where"></div>
+      <div class="outside"></div>
+    </aside>
+  </section>
+</main>
+
+<svg id="fx"></svg>
+<div class="timejump" id="tj"><div class="tj"><small>Проходит время</small><b></b><span></span></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ═════════ Данные фичи ═════════
+// Dmitry отправляет приглашение в четверг 29 октября, ссылка и гостевой пропуск живут 7 дней
+const INVITE_DAY = new Date(2026, 9, 29);
+const PASS_UNTIL = addDays(INVITE_DAY, 7);
+const VISIT_DAYS = Array.from({length: 7}, (_, k) => addDays(INVITE_DAY, k + 1));
+const TIMES = ['10:00', '12:00', '15:00', '19:00'];
+const CLUBS = ['DDX Пассаж · 1,2 км', 'DDX Люблино · 6,8 км'];
+const PLANS = {
+  1:  {name: 'Infinity 1 мес',  price: 2240,  old: 2800,  note: 'помесячно'},
+  6:  {name: 'Infinity 6 мес',  price: 12000, old: 15000, note: '2 000 ₽ в месяц'},
+  12: {name: 'Infinity 12 мес', price: 21600, old: 27000, note: '1 800 ₽ в месяц'},
+};
+const BANKS = [
+  {name: 'Т-Банк', letter: 'Т', bg: '#FFDD2D', fg: '#1A1F23'},
+  {name: 'Сбербанк', letter: 'С', bg: '#21A038'},
+  {name: 'Альфа-Банк', letter: 'А', bg: '#EF3124'},
+  {name: 'ВТБ', letter: 'В', bg: '#0A2896'},
+];
+const TG_CONTACT = {name: 'Аня', phone: '+7 (916) 123-41-20'};
+const DM_UNTIL = new Date(2026, 11, 15);   // абонемент Dmitry до 15 декабря, за друга +7 дней
+const BONUS_DAYS = 7;
+// QR приглашения ведёт на этот же прототип сразу в путь друга: его можно отсканировать с экрана
+const INVITE_URL = location.href.split(/[?#]/)[0] + '?guest=1';
+
+// Сценарии проверки: основной путь и четыре экрана «если что-то пошло не так» из схемы
+const SCENARIOS = {
+  main:     'Основной путь',
+  expired:  'Ссылка старше 7 дней',
+  wasGuest: 'Друг уже был гостем',
+  full:     'Нет мест на выбранное время',
+  noShow:   'Друг не пришёл в день визита',
+};
+
+// ═════════ Помощники ═════════
+function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
+function addMonths(d, n) { const x = new Date(d); x.setMonth(x.getMonth() + n); return x; }
+const fmt = (d, o) => d.toLocaleDateString('ru-RU', o);
+const dayMonth = d => fmt(d, {day: 'numeric', month: 'long'});                                 // 31 октября
+const fullDate = d => fmt(d, {day: 'numeric', month: 'long', year: 'numeric'}).replace(' г.', '');
+const wdShort = d => fmt(d, {weekday: 'short'});                                              // сб
+const wdLong = d => fmt(d, {weekday: 'long'});                                                // суббота
+const IN_DAY = ['в воскресенье', 'в понедельник', 'во вторник', 'в среду', 'в четверг', 'в пятницу', 'в субботу'];
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const rub = n => n.toLocaleString('ru-RU') + ' ₽';
+const daysBetween = (a, b) => Math.round((b - a) / 864e5);
+const plural = (n, [one, few, many]) => n % 10 === 1 && n % 100 !== 11 ? one : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? few : many;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const toMin = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+function shift(t, min) {
+  const x = toMin(t) + min;
+  return String(Math.floor(x / 60)).padStart(2, '0') + ':' + String(x % 60).padStart(2, '0');
+}
+function maskPhone(v) {
+  let d = v.replace(/\D/g, '');
+  if (d[0] === '7' || d[0] === '8') d = d.slice(1);
+  d = d.slice(0, 10);
+  if (!d) return '';
+  let out = '+7 (' + d.slice(0, 3);
+  if (d.length > 3) out += ') ' + d.slice(3, 6);
+  if (d.length > 6) out += '-' + d.slice(6, 8);
+  if (d.length > 8) out += '-' + d.slice(8, 10);
+  return out;
+}
+
+// ═════════ Состояние прототипа ═════════
+let S;
+const nm = () => esc(S.name.trim() || 'Аня');
+const visit = () => VISIT_DAYS[S.day];
+const clubName = () => S.club.split(' · ')[0];
+const passCode = () => `DDX-GUEST-${String(visit().getDate()).padStart(2, '0')}${String(visit().getMonth() + 1).padStart(2, '0')}-${S.time.replace(':', '')}-7Q4K`;
+const INVITE_TEXT = 'Го в зал в субботу? У меня для тебя бесплатный день 👇';
+
+function newState(scn, guest) {
+  const s = {
+    scenario: scn,
+    name: '', phone: '', club: CLUBS[0], day: 1, time: '19:00', agree: false, errors: {},
+    plan: 6, payMethod: 'СБП', stars: 0,
+    phones: {dm: {screen: 'M1', hist: []}, an: {screen: 'F0', hist: []}},
+    msgs: [], tgPush: false, sentOld: false, requested: false, relink: false, more: false,
+    registered: false, inClub: false, paid: false, lastWeb: null,
+    fullSlot: null, altPick: 0, e4day: 2, e4time: '19:00', noShowPending: false, noShowDone: false, nudged: false,
+    loopSent: false, sheet: null, wallet: '', tgShare: false,
+    banner: {dm: null, an: null}, now: {date: INVITE_DAY, time: '18:07'},
+    once: {}, qrSeed: 5, scene: null, active: 'dm', badge: {dm: false, an: false},
+  };
+  // Сценарии ошибок стартуют у самой развилки, чтобы не проходить весь путь заново
+  const sent = {day: INVITE_DAY, time: '18:07', text: INVITE_TEXT, link: true};
+  if (scn === 'expired') {
+    Object.assign(s, {sentOld: true, msgs: [{day: new Date(2026, 9, 21), time: '18:07', text: INVITE_TEXT, link: true, old: true}], active: 'an'});
+    s.phones.dm.screen = 'M2s'; s.phones.an.screen = 'F1';
+  }
+  if (scn === 'wasGuest' || scn === 'full' || guest) {
+    Object.assign(s, {msgs: [sent], tgPush: true, active: 'an', lastWeb: 'F2'});
+    s.phones.dm.screen = 'M2s'; s.phones.an = {screen: 'F2', hist: ['F1']};
+  }
+  if (scn === 'noShow') {
+    Object.assign(s, {msgs: [sent], tgPush: true, active: 'an', name: 'Аня', phone: TG_CONTACT.phone, agree: true, registered: true, lastWeb: 'F3'});
+    s.phones.dm.screen = 'M2s'; s.phones.an = {screen: 'F3', hist: ['F1', 'F2']};
+  }
+  return s;
+}
+
+// ═════════ Кусочки интерфейса ═════════
+const ICON = {
+  signal: '<svg viewBox="0 0 64 12"><rect x="0" y="8" width="3.4" height="4" rx="1"/><rect x="5" y="5.5" width="3.4" height="6.5" rx="1"/><rect x="10" y="3" width="3.4" height="9" rx="1"/><rect x="15" y="0" width="3.4" height="12" rx="1"/><path d="M31 3.2a9.6 9.6 0 0 1 12.6 0l-1.3 1.4a7.7 7.7 0 0 0-10 0zM33.4 5.8a6 6 0 0 1 7.8 0l-1.3 1.4a4.1 4.1 0 0 0-5.2 0zM35.8 8.4a2.4 2.4 0 0 1 3 0L37.3 10z"/><rect x="47" y="1" width="15" height="10" rx="3" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".5"/><rect x="48.6" y="2.6" width="10.6" height="6.8" rx="1.6"/><rect x="62.8" y="4" width="1.2" height="4" rx=".6" opacity=".5"/></svg>',
+  tg: '<svg viewBox="0 0 24 24"><path d="M21.4 3.6 2.9 10.7c-1.3.5-1.2 1.2-.2 1.5l4.7 1.5 1.8 5.6c.2.7.4.9.9.9.4 0 .6-.2.9-.4l2.3-2.2 4.7 3.5c.9.5 1.5.2 1.7-.8l3.1-14.6c.3-1.3-.5-1.8-1.4-1.6zM9 13.3l9.3-5.9c.4-.3.8-.1.5.2l-8 7.2-.3 3.3z"/></svg>',
+  bell: '<svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0"/></svg>',
+  pass: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></svg>',
+};
+const TAB_ICONS = {
+  'Главная':   '<svg viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5V20H4z"/></svg>',
+  'Календарь': '<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16M8 3v4M16 3v4"/></svg>',
+  'Тренеры':   '<svg viewBox="0 0 24 24"><path d="M6 8v8M18 8v8M3 10.5v3M21 10.5v3M6 12h12"/></svg>',
+  'Action':    '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M10 9l5 3-5 3z"/></svg>',
+  'Профиль':   '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>',
+};
+const status = (t) => `<div class="status"><span>${t}</span>${ICON.signal}</div>`;
+const tabs = (on) => `<nav class="tabs">${Object.keys(TAB_ICONS).map(t => `<button class="${t === on ? 'on' : ''}">${TAB_ICONS[t]}${t}</button>`).join('')}</nav>`;
+const passPill = `<button class="pass-pill" data-act="memberPass">${ICON.pass}Пропуск в клуб</button>`;
+const webBar = () => `<div class="wa-bar"><button class="wa-x" data-act="closeWeb">Закрыть</button><div class="wa-t"><span class="logo"><b>DDX</b> FITNESS</span><small>мини-приложение</small></div><button class="wa-m">···</button></div>`;
+const story = (cls, text) => `<button class="story ${cls}"><span>${text}</span></button>`;
+const ring = (days, frac) => `<div class="ring" style="background:conic-gradient(var(--cyan) 0 ${Math.round(frac * 100)}%,rgba(255,255,255,.15) 0)"><span>${days}<small>${plural(days, ['день', 'дня', 'дней'])}</small></span></div>`;
+const dayBtn = (d, on, act, i) => `<button class="day ${on ? 'on' : ''}" ${act ? `data-act="${act}" data-v="${i}"` : ''}>${wdShort(d)}<b>${d.getDate()}</b></button>`;
+const sheet = (inner, closeAct, fresh) => `<div class="sheet-bg ${fresh ? 'fresh' : ''}" ${closeAct ? `data-act="${closeAct}"` : ''}></div><div class="sheet ${fresh ? 'fresh' : ''}"><div class="grab"></div>${inner}</div>`;
+
+// Загрузка слота: вечером мест мало, а в сценарии «нет мест» выбранный слот заканчивается
+function slotLoad(day, t) {
+  if (S.fullSlot === day + '|' + t) return ['none', 'мест нет'];
+  return t === '19:00' ? ['few', 'мало мест'] : ['free', 'свободно'];
+}
+const slotChips = (day, cur, act) => `<div class="chips slots">${TIMES.map(t => {
+  const [k, txt] = slotLoad(day, t);
+  return `<button class="chip tslot ${t === cur ? 'on' : ''}" ${k === 'none' ? 'disabled' : `data-act="${act}" data-v="${t}"`}><b>${t}</b><small class="${k}">${txt}</small></button>`;
+}).join('')}</div>`;
+
+// QR: настоящий через библиотеку, без неё условный узор с тремя «глазками»
+function qr(seed, size = 170, text = '') {
+  let n, dark;
+  if (text && window.qrcode) {
+    const q = qrcode(0, 'M'); q.addData(text); q.make();
+    n = q.getModuleCount(); dark = (x, y) => q.isDark(y, x);
+  } else {
+    n = 25; let s = seed * 7919 + 13; const cells = [];
+    const rnd = () => (s = (s * 9301 + 49297) % 233280) / 233280;
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+      const o = x < 8 && y < 8 ? [0, 0] : x >= n - 8 && y < 8 ? [n - 7, 0] : x < 8 && y >= n - 8 ? [0, n - 7] : null;
+      if (o) {
+        const lx = x - o[0], ly = y - o[1];
+        cells.push(lx >= 0 && lx <= 6 && ly >= 0 && ly <= 6 && (lx === 0 || lx === 6 || ly === 0 || ly === 6 || (lx >= 2 && lx <= 4 && ly >= 2 && ly <= 4)));
+      } else cells.push(rnd() > 0.5);
+    }
+    dark = (x, y) => cells[y * n + x];
+  }
+  let rects = '';
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (dark(x, y)) rects += `<rect x="${x}" y="${y}" width="1.02" height="1.02"/>`;
+  return `<div class="qr"><svg viewBox="0 0 ${n} ${n}" width="${size}" height="${size}" shape-rendering="crispEdges"><g fill="#0E474C">${rects}</g></svg></div>`;
+}
+
+function lockScreen(date, time, pushes) {
+  return `${status('MTS')}
+    <div class="lk-date">${cap(wdLong(date))}, ${dayMonth(date)}</div>
+    <div class="lk-clock">${time}</div>
+    <div class="pushes">${pushes.length ? pushes.map(p => `
+      <button class="push ${p.old ? 'old' : ''}" data-act="${p.act || 'pushInfo'}">
+        <span class="ai ${p.tg ? 'tgi' : 'ddx'}">${p.tg ? ICON.tg : 'DDX'}</span>
+        <span class="pt"><span class="ph">${p.app}<span>${p.when}</span></span><b>${p.title}</b><br>${p.text}</span>
+      </button>`).join('') : '<div class="lk-empty">Нет новых уведомлений</div>'}</div>
+    <div class="lk-tools"><span></span><span></span></div>`;
+}
+
+// Баннер поверх открытого приложения: запрос новой ссылки у Dmitry, сообщение в Telegram у друга
+const banner = b => !b ? '' : `<button class="banner" data-act="${b.act}"><span class="ai ${b.tg ? 'tgi' : 'ddx'}">${b.tg ? ICON.tg : 'DDX'}</span><span class="pt"><span class="ph">${b.app}<span>сейчас</span></span><b>${b.title}</b><br>${b.text}</span></button>`;
+
+function chat() {
+  let out = '', lastDate = null;
+  S.msgs.forEach((m, i) => {
+    const label = daysBetween(m.day, S.now.date) === 0 ? 'Сегодня' : dayMonth(m.day);   // подпись дня как в Telegram
+    if (label !== lastDate) { out += `<div class="tg-date">${label}</div>`; lastDate = label; }
+    out += `<div class="bub ${i === S.msgs.length - 1 ? 'new' : ''}">${m.text}${m.link ? `
+      <div class="prev"><b>DDX Fitness</b>Бесплатный день в клубе. Dmitry приглашает тебя в DDX Пассаж
+        <div class="img"><span class="logo"><b>DDX</b> FITNESS</span><em>Гостевой день</em></div></div>` : ''}
+      <div class="tm">${m.time}</div>
+      ${m.link ? `<button class="open" data-act="openLink" data-v="${i}">Открыть</button>` : ''}</div>`;
+  });
+  return out;
+}
+
+function alternatives() {
+  const alts = [{day: S.day, time: S.time === '10:00' ? '12:00' : '10:00'}];
+  if (S.day + 1 < VISIT_DAYS.length) alts.push({day: S.day + 1, time: '12:00'});
+  if (S.day + 2 < VISIT_DAYS.length) alts.push({day: S.day + 2, time: '19:00'});
+  return alts;
+}
+
+function paySheet() {
+  const sh = S.sheet, p = PLANS[S.plan];
+  if (sh.step === 'wait') return sheet(`<div class="sh-state"><span class="spin dark"></span><b>${S.payMethod === 'СБП' ? 'Подтверди оплату в приложении банка' : 'Проводим оплату'}</b><small>${S.payMethod === 'СБП' ? sh.bank + ' · не закрывай экран' : 'Не закрывай экран'}</small></div>`);
+  if (sh.step === 'done') return sheet(`<div class="sh-state"><i class="tick"></i><b>Оплачено</b><small>${rub(p.price)} · ${p.name}</small></div>`);
+  const head = `<div class="sh-sub">DDX Fitness · ${p.name}</div>`;
+  if (S.payMethod === 'СБП') return sheet(`<div class="sh-h">Оплата через СБП</div><div class="sh-sum">${rub(p.price)}</div>${head}
+    <div class="sh-l">Выбери банк</div>
+    ${BANKS.map((b, i) => `<button class="bank" data-act="payBank" data-v="${i}"><i style="background:${b.bg};color:${b.fg || '#fff'}">${b.letter}</i>${b.name}<span>›</span></button>`).join('')}`, 'closeSheet', S.once.sheet);
+  if (S.payMethod === 'Карта') return sheet(`<div class="sh-h">Оплата картой</div><div class="sh-sum">${rub(p.price)}</div>${head}
+    <div class="contact"><span class="av mir">МИР</span><div><b>•••• 2048</b><small>Сохранённая карта</small></div></div>
+    <button class="btn" data-act="payBank" data-v="card">Оплатить ${rub(p.price)}</button>`, 'closeSheet', S.once.sheet);
+  const parts = [0, 14, 28, 42].map(k => addDays(visit(), k));
+  return sheet(`<div class="sh-h">Оплата частями</div><div class="sh-sum">4 × ${rub(p.price / 4)}</div><div class="sh-sub">Без переплаты, платёж раз в две недели</div>
+    <div class="sched">${parts.map((d, i) => `<div><b>${rub(p.price / 4)}</b><small>${i ? dayMonth(d) : 'сегодня'}</small></div>`).join('')}</div>
+    <button class="btn" data-act="payBank" data-v="parts">Оформить</button>`, 'closeSheet', S.once.sheet);
+}
+
+const walletSheet = () => `<div class="wallet ${S.once.wallet ? 'fresh' : ''} ${S.wallet === 'adding' ? 'adding' : ''}">
+  <div class="w-top"><button data-act="walletCancel">Отменить</button><b>Wallet</b><button data-act="walletAdd">Добавить</button></div>
+  <div class="pass">
+    <div class="pass-h"><span class="logo"><b>DDX</b> FITNESS</span><span class="pass-k">Гостевой<br>пропуск</span></div>
+    <div class="pass-f"><div><small>Гость</small>${nm()}</div><div><small>Клуб</small>${clubName()}</div></div>
+    <div class="pass-f"><div><small>Дата</small>${wdShort(visit())}, ${dayMonth(visit())}</div><div><small>Время</small>${S.time}</div></div>
+    <div class="pass-qr">${qr(11, 150, passCode())}</div>
+    <div class="pass-n">Действует до ${dayMonth(PASS_UNTIL)}</div>
+  </div></div>`;
+
+// ═════════ Экраны ═════════
+// Номера экранов совпадают со схемой пути из модуля 1: M – участник, F – друг, T – физическая точка, E – ошибка.
+// web: true – экран мини-приложения DDX внутри Telegram
+const SCREENS = {
+  M1: {where: 'Экран 1 · Главная участника', html: () => `
+    ${status('18:05')}
+    <div class="body pad-tabs">
+      <div class="row" style="margin-top:6px"><span class="logo"><b>DDX</b> FITNESS</span><button class="bell">${ICON.bell}</button></div>
+      <div class="stories">${story('a', 'Новинки')}${story('c', 'Акции')}${story('b', 'Правила клуба')}${story('d', 'Тренеры')}</div>
+      <div class="promo">
+        <div class="h md">Пригласи друга на бесплатный день</div>
+        <div class="s">Тебе +${BONUS_DAYS} дней к абонементу, когда друг купит свой</div>
+        <button class="btn white" data-act="invite">Пригласить</button>
+      </div>
+      <div class="h sm">Мой календарь</div>
+      <div class="days">${Array.from({length: 7}, (_, k) => dayBtn(addDays(INVITE_DAY, k - 3), k === 3)).join('')}</div>
+      <div class="card"><div class="t">Functional · сб 11:00</div><div class="s">DDX Пассаж · тренер Максим</div></div>
+    </div>${passPill}${tabs('Главная')}`},
+
+  M2: {where: 'Экран 2 · Приглашение', html: () => `
+    ${status('18:06')}
+    <div class="body pad-tabs">
+      <button class="back" data-act="back">‹ Назад</button>
+      <div class="h">Гостевой день для друга</div>
+      <div class="p">${S.relink ? `Новая ссылка для ${nm()}` : 'Один гость'} · действует до ${dayMonth(PASS_UNTIL)}</div>
+      <div class="card teal qrcard">${qr(S.qrSeed, 170, INVITE_URL)}<div class="s">Друг откроет ссылку или наведёт камеру на QR и получит пропуск на турникет. Тебе +${BONUS_DAYS} дней, когда он купит абонемент</div></div>
+      <button class="btn tg" data-act="send">${ICON.tg}Отправить в Telegram</button>
+      <button class="btn ghost" data-act="copy">Скопировать ссылку</button>
+    </div>${tabs('Главная')}`},
+
+  // Статус приглашения обновляется вживую, пока друг идёт по своему пути
+  M2s: {where: 'Экран 2 · Статус приглашения', html: () => {
+    const st = (cls, t, s) => `<li class="${cls}"><span><b>${t}</b><small>${s}</small></span></li>`;
+    const step1 = S.sentOld ? st('cur warn', 'Ссылка отправлена', '21 октября · ссылка устарела') : st('ok', 'Ссылка отправлена', `${wdShort(INVITE_DAY)} ${dayMonth(INVITE_DAY)}, 18:07`);
+    const step2 = S.registered ? st('ok', 'Пропуск оформлен', `${wdShort(visit())} ${dayMonth(visit())}, ${S.time} · ${clubName()}`)
+                               : st(S.sentOld ? '' : 'cur', 'Пропуск оформлен', 'Ждём, когда друг откроет ссылку');
+    const step3 = S.inClub ? st('ok', 'Турникет пройден', `${wdShort(visit())}, ${shift(S.time, -6)}`)
+                : S.noShowPending ? st('cur warn', 'Турникет пройден', `Гость не пришёл. Пропуск действует до ${dayMonth(PASS_UNTIL)}`)
+                : st(S.registered ? 'cur' : '', 'Турникет пройден', 'Пришлём пуш, когда друг пройдёт турникет');
+    const step4 = S.paid ? st('ok', 'Абонемент куплен', `Тебе +${BONUS_DAYS} дней`)
+                         : st(S.inClub ? 'cur' : '', 'Абонемент куплен', `Когда друг купит абонемент, тебе +${BONUS_DAYS} дней`);
+    return `${status(S.inClub ? shift(S.time, -4) : S.noShowPending ? '10:01' : '18:07')}
+    <div class="body pad-tabs">
+      <div class="h">Гостевой день для друга</div>
+      <div class="p">${S.sentOld ? 'Ссылка отправлена 21 октября и действовала до 28 октября' : `Один гость · ссылка действует до ${dayMonth(PASS_UNTIL)}`}</div>
+      <div class="card"><ol class="steps">${step1}${step2}${step3}${step4}</ol></div>
+      ${S.noShowPending ? (S.nudged
+        ? `<div class="card mint"><div class="t">Напоминание отправлено</div><div class="s">Сообщение ушло другу в Telegram</div></div>`
+        : `<button class="btn" data-act="nudge">Напомнить другу</button>`) : ''}
+    </div>${tabs('Главная')}`;
+  }},
+
+  M3: {where: 'Экран 6 · Пуш участнику', lock: true, html: () => lockScreen(visit(), shift(S.time, -6), [
+    {app: 'DDX Fitness', when: 'сейчас', title: `${nm()} уже в клубе 🎉`, text: `Пропуск сработал на турникете. Когда ${nm()} купит абонемент, тебе прибавим ${BONUS_DAYS} дней`, act: 'openStatus'},
+    {app: 'DDX Fitness', when: '14:20', title: 'Functional завтра в 11:00', text: 'Твоё место сохранено', old: true},
+  ])},
+
+  M5: {where: 'Ошибка · Пуш участнику', err: true, lock: true, html: () => lockScreen(addDays(visit(), 1), '10:00', [
+    {app: 'DDX Fitness', when: 'сейчас', title: 'Твой гость пока не пришёл', text: `Пропуск действует до ${dayMonth(PASS_UNTIL)}. Нажми, чтобы напомнить другу`, act: 'openStatus'},
+  ])},
+
+  M4: {where: 'Экран 11 · Бонус участнику', html: () => {
+    const until = addDays(DM_UNTIL, BONUS_DAYS), left = daysBetween(visit(), until);
+    return `${status(shift(S.time, 72))}
+    <div class="body pad-tabs">
+      <div class="h">Бонус за друга начислен</div>
+      <div class="p">${nm()} теперь участник клуба: ${PLANS[S.plan].name} по твоему приглашению</div>
+      <div class="card teal"><div class="row"><div><div class="h sm white">Infinity 6 мес</div><div class="s">+${BONUS_DAYS} дней за друга<br>абонемент до ${dayMonth(until)}</div></div>${ring(left, left / 182)}</div></div>
+      <div class="card mint"><div class="t">Приглашено друзей: 3</div><div class="s">Игорь · Настя · ${nm()}</div></div>
+      <button class="btn" data-act="inviteMore">Пригласить ещё</button>
+    </div>${tabs('Профиль')}`;
+  }},
+
+  // Постоянный пропуск участника: кнопка «Пропуск в клуб» на главной
+  MP: {where: 'Вне схемы · Пропуск участника', html: (who) => {
+    const dmSide = who === 'dm';
+    return `${status(dmSide ? '18:06' : shift(S.time, 71))}
+    <div class="body pad-tabs">
+      <button class="back" data-act="back">‹ Назад</button>
+      <div class="h">Пропуск в клуб</div>
+      <div class="p">${dmSide ? 'Infinity 6 мес · Dmitry' : `${PLANS[S.plan].name} · ${nm()}`}</div>
+      <div class="card teal qrcard">${qr(dmSide ? 41 : 43, 190, dmSide ? 'DDX-MEMBER-D0291' : 'DDX-MEMBER-A3110')}<div class="s">Поднеси QR к считывателю на турникете</div></div>
+      <div class="card"><div class="t">${dmSide ? 'DDX Пассаж' : clubName()}</div><div class="s ok-t">Сейчас в зале свободно</div></div>
+    </div>${tabs('Главная')}`;
+  }},
+
+  F0: {where: () => S.tgPush ? 'Экран 3 · Сообщение в Telegram' : 'Ждёт приглашения', lock: true, html: () => lockScreen(INVITE_DAY, '18:07',
+    S.tgPush ? [{app: 'Telegram', tg: true, when: 'сейчас', title: 'Dmitry', text: INVITE_TEXT, act: 'openTg'}] : [])},
+
+  F1: {where: 'Экран 3 · Чат в Telegram', tg: true, html: () => `
+    ${status(S.noShowPending ? '10:03' : '18:08')}
+    <div class="tg-nav"><button class="bk">‹ Чаты</button><div class="who"><b>Dmitry</b><small>в сети</small></div><div class="av">D</div></div>
+    <div class="tg-body">${chat()}</div>
+    <div class="tg-in"><button class="ic"></button><button class="inp">Сообщение</button><button class="ic"></button></div>`},
+
+  E1: {web: true, where: 'Ошибка · Ссылка старше 7 дней', err: true, html: () => `
+    ${status('18:08')}${webBar()}
+    <div class="body">
+      <div class="h">Ссылка больше не действует</div>
+      <div class="p">Гостевая ссылка живёт 7 дней, а эта пришла 21 октября. Попроси у Dmitry новую: запрос придёт ему в приложение</div>
+      ${S.requested
+        ? `<div class="card mint"><div class="t">Запрос отправлен</div><div class="s">Новая ссылка придёт от Dmitry в Telegram</div></div>`
+        : `<button class="btn" data-act="requestNew">Попросить новую ссылку</button>`}
+      <button class="btn ghost" data-act="toPlans">Оформить абонемент</button>
+    </div>`},
+
+  F2: {web: true, where: 'Экран 4 · Регистрация гостя', html: () => `
+    ${status('18:08')}${webBar()}
+    <div class="body">
+      <div class="h">Гостевой день от Dmitry</div>
+      <div class="p">Бесплатно · один визит · без звонка менеджера</div>
+      <button class="btn tgo" data-act="tgFill">${ICON.tg}Заполнить из Telegram</button>
+      <label class="field ${S.errors.name ? 'bad' : ''} ${S.once.filled ? 'flash' : ''}"><span>Имя</span><input data-bind="name" value="${esc(S.name)}" placeholder="Как тебя зовут" autocomplete="off"></label>
+      ${S.errors.name ? '<div class="ferr">Напиши имя, так тебя встретит тренер</div>' : ''}
+      <label class="field ${S.errors.phone ? 'bad' : ''} ${S.once.filled ? 'flash' : ''}"><span>Телефон</span><input data-bind="phone" value="${esc(S.phone)}" placeholder="+7 (___) ___-__-__" inputmode="tel" autocomplete="off"></label>
+      ${S.errors.phone ? '<div class="ferr">Нужен номер из 10 цифр, на него придёт пропуск</div>' : ''}
+      <label class="field"><span>Клуб</span><select data-bind="club">${CLUBS.map(c => `<option ${c === S.club ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
+      <div class="lbl">День визита</div>
+      <div class="days">${VISIT_DAYS.map((d, i) => dayBtn(d, i === S.day, 'pickDay', i)).join('')}</div>
+      <div class="lbl">Время</div>
+      ${slotChips(S.day, S.time, 'pickTime')}
+      <button class="check ${S.agree ? 'on' : ''}" data-act="agree"><i></i>Принимаю правила клуба</button>
+      ${S.errors.agree ? '<div class="ferr">Отметь согласие с правилами</div>' : ''}
+      <button class="btn" data-act="register">Получить пропуск</button>
+    </div>
+    ${S.tgShare ? sheet(`<div class="sh-ic">${ICON.tg}</div><div class="sh-h">Поделиться контактом?</div>
+      <div class="sh-sub">DDX Fitness получит имя и номер телефона из Telegram, чтобы оформить гостевой пропуск</div>
+      <div class="contact"><span class="av">${TG_CONTACT.name[0]}</span><div><b>${TG_CONTACT.name}</b><small>${TG_CONTACT.phone}</small></div></div>
+      <button class="btn tg" data-act="tgShareOk">Поделиться</button><button class="btn plain" data-act="tgShareNo">Отмена</button>`, 'tgShareNo', S.once.share) : ''}`},
+
+  E2: {web: true, where: 'Ошибка · Друг уже был гостем', err: true, html: () => `
+    ${status('18:09')}${webBar()}
+    <div class="body">
+      <div class="h">Гостевой день уже был</div>
+      <div class="p">По номеру ${esc(S.phone)} гостевой визит был 12 августа в DDX Люблино. Второй раз бесплатно нельзя, но скидка друга работает</div>
+      <div class="card teal"><div class="h sm white">Скидка друга −20%</div><div class="s">Dmitry получит ${BONUS_DAYS} дней, а ты абонемент дешевле</div>
+        <div class="price">${rub(2240)}/мес <s>${rub(2800)}</s></div></div>
+      <button class="btn" data-act="toPlans">Оформить со скидкой</button>
+    </div>`},
+
+  E3: {web: true, where: 'Ошибка · Нет мест на это время', err: true, html: () => `
+    ${status('18:09')}${webBar()}
+    <div class="body">
+      <div class="h">${cap(IN_DAY[visit().getDay()])} в ${S.time} мест нет</div>
+      <div class="p">Последнее гостевое место на это время только что заняли. В клубе лимит гостей на каждый час, чтобы в зале было свободно. Ближайшее свободное время:</div>
+      <div class="chips">${alternatives().map((a, k) => `<button class="chip ${k === S.altPick ? 'on' : ''}" data-act="altPick" data-v="${k}">${cap(wdShort(VISIT_DAYS[a.day]))} ${a.time}</button>`).join('')}</div>
+      <button class="btn" data-act="altOk">Выбрать это время</button>
+      <button class="btn ghost" data-act="back">Выбрать другой день</button>
+    </div>`},
+
+  F3: {web: true, where: 'Экран 5 · Гостевой пропуск', html: () => `
+    ${status(S.noShowDone ? '10:02' : '18:10')}${webBar()}
+    <div class="body has-out">
+      <div class="h">Гостевой пропуск</div>
+      <div class="p">${clubName()} · ${wdShort(visit())} ${dayMonth(visit())} · ${S.time}</div>
+      <div class="card teal qrcard">${qr(11, 170, passCode())}<div class="s">Покажи QR на турникете</div></div>
+      ${S.wallet === 'added'
+        ? '<button class="btn ghost done" data-act="wallet">✓ Пропуск в Wallet</button>'
+        : '<button class="btn ghost" data-act="wallet">Добавить в Wallet</button>'}
+      <button class="btn ghost">Записаться на тренировку</button>
+      <div class="p center small" style="margin-top:12px">Пропуск действует до ${dayMonth(PASS_UNTIL)}. Возьми форму, кроссовки и полотенце</div>
+    </div>
+    ${S.wallet === 'open' || S.wallet === 'adding' ? walletSheet() : ''}`,
+    out: () => S.wallet === 'open' || S.wallet === 'adding' ? []
+      : S.scenario === 'noShow' && !S.noShowDone
+      ? [{k: 'Проходит время', t: 'День визита прошёл, гость в клуб не пришёл', act: 'noShow'}]
+      : [{k: 'Действие в клубе', t: `${cap(wdLong(visit()))}, ${shift(S.time, -6)}: ${nm()} прикладывает QR к турникету`, act: 'turnstile'}]},
+
+  T1: {where: 'Физическая точка · Турникет', html: () => `
+    <div class="kind">Турникет клуба</div>
+    <div class="tstile"><b class="cab l"></b><b class="cab r"></b><i class="flap l"></i><i class="flap r"></i>
+      <span class="reader"><em></em></span><span class="beep"></span><span class="mph"><u></u></span></div>
+    <div class="after">
+      <div class="h">Створки открылись</div>
+      <div class="p">Считыватель принял QR из пропуска. В эту секунду Dmitry получает пуш, а у гостя открывается экран клуба</div>
+      <button class="btn" data-act="sceneNext">Пройти в клуб</button>
+    </div>`},
+
+  F4: {web: true, where: 'Экран 7 · В клубе', html: () => `
+    ${status(shift(S.time, -5))}${webBar()}
+    <div class="body has-out">
+      <div class="h">Добро пожаловать, ${nm()}</div>
+      <div class="p">Ты в ${clubName()}</div>
+      <div class="card mint"><div class="t">Шкафчик 214 · код 4471</div><div class="s">Раздевалка справа от ресепшена</div></div>
+      <div class="card"><div class="t">Загруженность клуба</div><div class="s ok-t">Сейчас в зале свободно</div>
+        <div class="load"><i style="height:8px"></i><i style="height:8px"></i><i style="height:12px"></i><i style="height:16px"></i><i class="h" style="height:22px"></i><i class="x" style="height:34px"></i><i class="h" style="height:26px"></i><i style="height:14px"></i></div></div>
+      <div class="card row" style="justify-content:flex-start"><span class="coach"></span><div><div class="t">Тренер Максим встретит тебя</div><div class="s">У ресепшена через 5 минут, покажет зал и тренажёры</div></div></div>
+    </div>`,
+    out: () => [{k: 'Действие в клубе', t: 'Пойти на тренировку с тренером, 60 минут', act: 'train'}]},
+
+  T2: {where: 'Физическая точка · Тренировка', html: () => `
+    <div class="kind">Тренировка · 60 минут</div>
+    <div class="dumb"><b></b><i class="l"></i><i class="r"></i></div>
+    <div class="h">Первая тренировка</div>
+    <div class="p">Тренер показывает зал и отвечает на вопросы. Это единственный шаг пути, который нельзя пройти в телефоне</div>
+    <div class="bar"><i></i></div>
+    <button class="btn" data-act="sceneNext">Тренировка закончилась</button>`},
+
+  F5: {web: true, where: 'Экран 8 · Оценка и скидка', html: () => `
+    ${status(shift(S.time, 66))}${webBar()}
+    <div class="body">
+      <div class="h">Как прошло?</div>
+      <div class="stars">${[1, 2, 3, 4, 5].map(n => `<button class="${n <= S.stars ? 'on' : ''}" data-act="star" data-v="${n}">★</button>`).join('')}</div>
+      <div class="p">${!S.stars ? 'Оценка уйдёт тренеру Максиму' : S.stars >= 4 ? 'Спасибо! Передадим Максиму' : 'Спасибо, разберёмся, что улучшить'}</div>
+      <div class="card teal"><div class="h sm white">Скидка друга −20%</div>
+        <div class="s">До ${dayMonth(addDays(visit(), 3))}. Dmitry получит ${BONUS_DAYS} дней, а ты абонемент дешевле</div>
+        <div class="price">${rub(2240)}/мес <s>${rub(2800)}</s></div></div>
+      <button class="btn" data-act="toPlans">Оформить со скидкой</button>
+      <button class="btn ghost" data-act="remind">Напомнить завтра</button>
+    </div>`},
+
+  F6: {web: true, where: 'Экран 9 · Подписки', html: () => `
+    ${status(shift(S.time, 68))}${webBar()}
+    <div class="body">
+      <button class="back" data-act="back">‹ Назад</button>
+      <div class="h">Подписки</div>
+      <div class="p">Скидка друга −20% применена</div>
+      ${Object.entries(PLANS).map(([k, p]) => `
+        <button class="radio ${+k === S.plan ? 'on' : ''}" data-act="plan" data-v="${k}">
+          <span><b>${p.name}</b><small>${rub(p.price)} <s>${rub(p.old)}</s> · ${p.note}</small></span><i></i></button>`).join('')}
+      <div class="lbl">Оплата</div>
+      <div class="chips">${['СБП', 'Карта', 'Частями'].map(m => `<button class="chip ${m === S.payMethod ? 'on' : ''}" data-act="payMethod" data-v="${m}">${m}</button>`).join('')}</div>
+      <button class="btn" data-act="payNow">Оплатить ${rub(PLANS[S.plan].price)}</button>
+      <div class="p center small" style="margin-top:12px">Абонемент начнёт действовать сразу после оплаты</div>
+    </div>
+    ${S.sheet ? paySheet() : ''}`},
+
+  F7: {where: 'Экран 10 · Новый участник', html: () => {
+    const until = addMonths(visit(), S.plan), left = daysBetween(visit(), until);
+    return `${status(shift(S.time, 70))}
+    <div class="body pad-tabs">
+      <div class="row me"><span class="avatar"></span><b>${nm()}</b></div>
+      <div class="card teal"><div class="row"><div><div class="h sm white">${PLANS[S.plan].name}</div><div class="s">до ${fullDate(until)}</div></div>${ring(left, 0.98)}</div></div>
+      <div class="card mint"><div class="t">Пропуск теперь в приложении</div><div class="s">Кнопка «Пропуск в клуб» внизу экрана, турникет откроется по QR</div></div>
+      <div class="promo">
+        <div class="h md">Теперь твоя очередь</div>
+        <div class="s">Пригласи друга на бесплатный день, тебе +${BONUS_DAYS} дней к абонементу</div>
+        <button class="btn white" data-act="anInvite">Пригласить друга</button>
+      </div>
+    </div>${passPill}${tabs('Главная')}`;
+  }},
+
+  AI: {where: 'Петля · Друг зовёт следующего', html: () => `
+    ${status(shift(S.time, 71))}
+    <div class="body pad-tabs">
+      <button class="back" data-act="back">‹ Назад</button>
+      <div class="h">Гостевой день для друга</div>
+      <div class="p">Один гость · ссылка действует 7 дней</div>
+      <div class="card teal qrcard">${qr(23, 170, INVITE_URL)}<div class="s">Друг откроет ссылку и получит пропуск на турникет. Тебе +${BONUS_DAYS} дней, когда он купит абонемент</div></div>
+      ${S.loopSent
+        ? `<div class="card mint"><div class="t">Приглашение отправлено в Telegram</div><div class="s">Пришлём пуш, когда друг пройдёт турникет</div></div>`
+        : `<button class="btn tg" data-act="anSend">${ICON.tg}Отправить в Telegram</button>`}
+    </div>${tabs('Главная')}`},
+
+  E4: {web: true, where: 'Ошибка · Гость не пришёл', err: true, html: () => `
+    ${status('10:00')}${webBar()}
+    <div class="body">
+      <div class="h">Пропуск ещё действует</div>
+      <div class="p">${nm()}, ждём тебя в ${clubName()}. Выбери новый день до ${dayMonth(PASS_UNTIL)}, и пропуск обновится сам</div>
+      <div class="lbl">День визита</div>
+      <div class="days">${VISIT_DAYS.map((d, i) => i > S.day ? dayBtn(d, i === S.e4day, 'e4Day', i) : '').join('')}</div>
+      <div class="lbl">Время</div>
+      ${slotChips(S.e4day, S.e4time, 'e4Time')}
+      <button class="btn" data-act="renew">Обновить пропуск</button>
+    </div>`},
+};
+
+// ═════════ Переходы: что происходит при нажатии ═════════
+// Событие, которое уходит на другой телефон, сначала «летит» между ними, потом появляется там
+const ACT = {
+  invite:     () => go('dm', 'M2'),
+  inviteMore: () => { S.more = true; go('dm', 'M2'); },
+  memberPass: (v, who) => go(who, 'MP'),
+  back:       (v, who) => back(who),
+  copy:       () => toast('Ссылка скопирована'),
+  async send() {
+    const run = S;
+    go('dm', 'M2s');
+    if (S.more) { S.more = false; toast('Приглашение отправлено. Новый друг пройдёт тот же путь'); return; }
+    await fly('dm', 'an', 'tg');
+    if (run !== S) return;
+    if (S.relink) {
+      S.relink = false; S.sentOld = false;
+      S.msgs.push({day: INVITE_DAY, time: '18:12', text: 'Держи новую, эта работает 👇', link: true});
+      go('an', 'F1', {ping: true, focus: true, note: 'Новая ссылка пришла другу в Telegram'});
+      refresh('dm');
+      return;
+    }
+    S.msgs = [{day: INVITE_DAY, time: '18:07', text: INVITE_TEXT, link: true}];
+    S.tgPush = true;
+    go('an', 'F0', {ping: true, focus: true, note: 'Приглашение пришло другу в Telegram'});
+  },
+  openTg:     () => go('an', 'F1'),
+  openLink(v) {
+    if (S.msgs[+v].old) return go('an', 'E1');
+    go('an', S.lastWeb && S.lastWeb !== 'E1' ? S.lastWeb : 'F2');
+  },
+  closeWeb:   () => go('an', 'F1'),
+  async requestNew() {
+    const run = S;
+    S.requested = true;
+    go('an', 'E1');
+    await fly('an', 'dm', 'ddx');
+    if (run !== S) return;
+    S.banner.dm = {app: 'DDX Fitness', title: `${nm()} просит новую ссылку`, text: 'Старая перестала работать. Нажми, чтобы отправить новую', act: 'bannerTap'};
+    go('dm', S.phones.dm.screen, {ping: true, focus: true, note: 'Запрос новой ссылки пришёл Dmitry'});
+  },
+  bannerTap() { S.banner.dm = null; S.relink = true; S.qrSeed++; go('dm', 'M2'); },
+  tgFill()    { S.tgShare = true; S.once.share = true; go('an', 'F2'); },
+  tgShareNo() { S.tgShare = false; go('an', 'F2'); },
+  tgShareOk() {
+    S.tgShare = false;
+    if (!S.name.trim()) S.name = TG_CONTACT.name;
+    S.phone = TG_CONTACT.phone;
+    delete S.errors.name; delete S.errors.phone;
+    S.once.filled = true;
+    go('an', 'F2');
+  },
+  agree()     { S.agree = !S.agree; delete S.errors.agree; go('an', 'F2'); },
+  pickDay:    (v) => { S.day = +v; go('an', 'F2'); },
+  pickTime:   (v) => { S.time = v; go('an', 'F2'); },
+  register() {
+    const e = {};
+    if (S.name.trim().length < 2) e.name = 1;
+    if (S.phone.replace(/\D/g, '').length < 11) e.phone = 1;
+    if (!S.agree) e.agree = 1;
+    S.errors = e;
+    if (Object.keys(e).length) return go('an', 'F2');
+    if (S.scenario === 'wasGuest') return go('an', 'E2');
+    const slot = S.day + '|' + S.time;
+    if (S.scenario === 'full' && (!S.fullSlot || S.fullSlot === slot)) { S.fullSlot = slot; S.altPick = 0; return go('an', 'E3'); }
+    issuePass();
+  },
+  altPick:    (v) => { S.altPick = +v; go('an', 'E3'); },
+  altOk()     { const a = alternatives()[S.altPick]; S.day = a.day; S.time = a.time; issuePass(); },
+  wallet() {
+    if (S.wallet === 'added') return toast('Пропуск уже в Wallet');
+    S.wallet = 'open'; S.once.wallet = true; go('an', 'F3');
+  },
+  walletCancel: () => { S.wallet = ''; go('an', 'F3'); },
+  async walletAdd() {
+    const run = S;
+    S.wallet = 'adding'; go('an', 'F3');
+    await wait(650);
+    if (run !== S) return;
+    S.wallet = 'added'; go('an', 'F3');
+    toast('Пропуск добавлен в Wallet');
+  },
+  async turnstile() {
+    const run = S;
+    await timeJump(visit(), shift(S.time, -6));
+    if (run !== S) return;
+    openScene('an', 'T1');
+    await wait(1000);                       // телефон дошёл до считывателя, загорелся зелёный
+    if (run !== S) return;
+    S.inClub = true;
+    await fly('an', 'dm', 'ddx');
+    if (run !== S) return;
+    go('dm', 'M3', {ping: true, note: 'Dmitry получил пуш: друг в клубе'});
+  },
+  train:      () => openScene('an', 'T2'),
+  sceneNext() { const id = S.scene.id; closeScene(); go('an', id === 'T1' ? 'F4' : 'F5'); },
+  async noShow() {
+    const run = S;
+    await timeJump(addDays(visit(), 1), '10:00');
+    if (run !== S) return;
+    S.noShowPending = true;
+    S.e4day = Math.min(S.day + 1, VISIT_DAYS.length - 1);
+    go('an', 'E4');
+    await fly('an', 'dm', 'ddx');
+    if (run !== S) return;
+    go('dm', 'M5', {ping: true, note: 'Dmitry получил пуш: гость не пришёл'});
+  },
+  openStatus: () => go('dm', 'M2s'),
+  async nudge() {
+    const run = S;
+    S.nudged = true; go('dm', 'M2s');
+    S.msgs.push({day: S.now.date, time: '10:02', text: `Ты где? Пропуск действует до ${dayMonth(PASS_UNTIL)}, давай сходим вместе 💪`});
+    await fly('dm', 'an', 'tg');
+    if (run !== S) return;
+    S.banner.an = {tg: true, app: 'Telegram', title: 'Dmitry', text: S.msgs[S.msgs.length - 1].text, act: 'anBannerTap'};
+    go('an', S.phones.an.screen, {ping: true, focus: true, note: 'Напоминание пришло другу в Telegram'});
+  },
+  anBannerTap() { S.banner.an = null; go('an', 'F1'); },
+  e4Day:      (v) => { S.e4day = +v; go('an', 'E4'); },
+  e4Time:     (v) => { S.e4time = v; go('an', 'E4'); },
+  renew() {
+    S.day = S.e4day; S.time = S.e4time; S.noShowPending = false; S.noShowDone = true;
+    go('an', 'F3'); refresh('dm');
+    toast('Пропуск обновлён');
+  },
+  star:       (v) => { S.stars = +v; go('an', 'F5'); },
+  toPlans:    () => go('an', 'F6'),
+  remind:     () => toast('Напомним завтра в 12:00'),
+  plan:       (v) => { S.plan = +v; go('an', 'F6'); },
+  payMethod:  (v) => { S.payMethod = v; go('an', 'F6'); },
+  payNow()    { S.sheet = {step: 'choose'}; S.once.sheet = true; go('an', 'F6'); },
+  closeSheet: () => { S.sheet = null; go('an', 'F6'); },
+  async payBank(v) {
+    if (!S.sheet || S.sheet.step !== 'choose') return;
+    const run = S;
+    S.sheet = {step: 'wait', bank: BANKS[+v] ? BANKS[+v].name : ''};
+    go('an', 'F6');
+    await wait(1300);
+    if (run !== S) return;
+    S.sheet.step = 'done'; go('an', 'F6');
+    await wait(1000);
+    if (run !== S) return;
+    S.sheet = null; S.paid = true;
+    go('an', 'F7');
+    await fly('an', 'dm', 'ddx');
+    if (run !== S) return;
+    go('dm', 'M4', {ping: true, note: 'Dmitry получил бонус за друга'});
+    setTimeout(() => run === S && toast(`Путь пройден: друг стал участником, Dmitry получил +${BONUS_DAYS} дней`, 4200), 700);
+  },
+  anInvite:   () => go('an', 'AI'),
+  anSend()    { S.loopSent = true; go('an', 'AI'); toast('Петля замкнулась: новый участник зовёт следующего друга'); },
+  pushInfo:   () => toast('Пуш открывает приложение. Путь продолжается на телефоне друга'),
+};
+
+function issuePass() {
+  S.registered = true;
+  go('an', 'F3');
+  refresh('dm');
+}
+
+// ═════════ Движок: показ экранов, история, подсветка ═════════
+const dev = who => document.getElementById(who);
+const isNarrow = () => matchMedia('(max-width:1079px)').matches;
+
+function render(who, animate) {
+  const st = S.phones[who], scr = SCREENS[st.screen], d = dev(who);
+  const screenEl = d.querySelector('.screen');
+  const oldBody = screenEl.querySelector('.body');
+  const keepScroll = !animate && oldBody ? oldBody.scrollTop : 0;
+  screenEl.innerHTML = `<div class="view ${scr.lock ? 'lockv' : ''} ${scr.tg ? 'tgv' : ''} ${animate ? 'enter' : ''}">${scr.html(who)}${banner(S.banner[who])}<div class="hb"></div></div>`;
+  const body = screenEl.querySelector('.body');
+  if (body && keepScroll) body.scrollTop = keepScroll;
+  const chatEl = screenEl.querySelector('.tg-body');
+  if (chatEl) chatEl.scrollTop = chatEl.scrollHeight;
+
+  // Подпись «что сейчас на экране» и действия вне экрана рядом с телефоном
+  const sceneOn = S.scene && S.scene.who === who;
+  const meta = sceneOn ? SCREENS[S.scene.id] : scr;
+  const where = typeof meta.where === 'function' ? meta.where() : meta.where;
+  const whereEl = d.querySelector('.where');
+  whereEl.innerHTML = `<small>Сейчас на экране</small>${where}`;
+  whereEl.classList.toggle('err', !!meta.err);
+  const outs = !sceneOn && scr.out ? scr.out() : [];
+  d.querySelector('.outside').innerHTML = outs.map(o => `<button class="out" data-act="${o.act}"><small>${o.k}</small>${o.t}</button>`).join('');
+  if (who === 'an') {
+    d.querySelector('.role').textContent = S.name.trim() || 'Аня';
+    document.querySelector('[data-role="an"]').textContent = S.name.trim() || 'Аня';
+  }
+  S.once = {};   // одноразовые анимации (шторка выехала, поля подсветились) отыграли
+}
+
+function go(who, id, opt = {}) {
+  const st = S.phones[who];
+  const changed = st.screen !== id;
+  if (changed) { st.hist.push(st.screen); st.screen = id; }
+  if (SCREENS[id].web) S.lastWeb = id;
+  render(who, changed);
+  if (opt.ping) ping(who, opt);
+}
+
+// Перерисовать экран, если на нём живой статус
+function refresh(who) { if (S.phones[who].screen === 'M2s') render(who, false); }
+
+function back(who) {
+  const st = S.phones[who], prev = st.hist.pop();
+  if (!prev) return;
+  st.screen = prev;
+  render(who, true);
+}
+
+// Событие пришло на другой телефон: подсвечиваем его, на узком экране переключаемся или ставим метку
+function ping(who, opt) {
+  const ph = dev(who).querySelector('.phone');
+  ph.classList.remove('ping'); void ph.offsetWidth; ph.classList.add('ping');
+  if (!isNarrow() || S.active === who) return;
+  if (opt.focus) { setTimeout(() => setActive(who), 450); toast(opt.note); }
+  else { S.badge[who] = true; renderRoles(); toast(opt.note + '. Переключитесь вверху'); }
+}
+
+// Полёт события между телефонами по дуге: синий самолётик Telegram или оранжевый пуш DDX
+function fly(from, to, kind) {
+  if (isNarrow()) return Promise.resolve();
+  const a = dev(from).querySelector('.phone').getBoundingClientRect();
+  const b = dev(to).querySelector('.phone').getBoundingClientRect();
+  const p0 = {x: a.left + a.width / 2, y: a.top + a.height * 0.45};
+  const p2 = {x: b.left + b.width / 2, y: b.top + b.height * 0.18};
+  const p1 = {x: (p0.x + p2.x) / 2, y: Math.min(p0.y, p2.y) - 160};
+  const at = t => ({x: (1 - t) ** 2 * p0.x + 2 * (1 - t) * t * p1.x + t * t * p2.x, y: (1 - t) ** 2 * p0.y + 2 * (1 - t) * t * p1.y + t * t * p2.y});
+  const dur = 900, ease = 'cubic-bezier(.45,0,.25,1)';
+
+  const svg = document.getElementById('fx');
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', `M${p0.x},${p0.y} Q${p1.x},${p1.y} ${p2.x},${p2.y}`);
+  path.setAttribute('class', kind);
+  svg.appendChild(path);
+  const len = path.getTotalLength();
+  path.style.strokeDasharray = len;
+  path.animate([{strokeDashoffset: len}, {strokeDashoffset: 0}], {duration: dur, easing: ease, fill: 'forwards'});
+
+  const tok = document.createElement('div');
+  tok.className = 'flyer ' + kind;
+  tok.innerHTML = kind === 'tg' ? ICON.tg : 'DDX';
+  document.body.appendChild(tok);
+  tok.animate(Array.from({length: 17}, (_, i) => {
+    const t = i / 16, p = at(t);
+    return {transform: `translate(${p.x - 22}px,${p.y - 22}px) scale(${0.7 + 0.4 * Math.sin(Math.PI * t)})`};
+  }), {duration: dur, easing: ease, fill: 'forwards'});
+
+  return wait(dur).then(() => {
+    tok.remove();
+    path.animate([{opacity: 0.55}, {opacity: 0}], {duration: 450, fill: 'forwards'}).onfinish = () => path.remove();
+  });
+}
+
+// Плашка «прошло время» поверх обоих телефонов. Нажатие пропускает паузу
+function timeJump(date, time) {
+  const from = S.now, days = daysBetween(from.date, date), min = toMin(time) - toMin(from.time);
+  const later = days === 1 ? 'на следующий день' : days > 1 ? `через ${days} ${plural(days, ['день', 'дня', 'дней'])}`
+              : min < 90 ? 'через час' : `через ${Math.round(min / 60)} ${plural(Math.round(min / 60), ['час', 'часа', 'часов'])}`;
+  S.now = {date, time};
+  const el = document.getElementById('tj');
+  el.querySelector('b').textContent = `${cap(wdLong(date))}, ${dayMonth(date)}`;
+  el.querySelector('span').textContent = `${later} · ${time}`;
+  el.classList.add('on');
+  return new Promise(res => {
+    let done = false;
+    const finish = () => { if (done) return; done = true; el.classList.remove('on'); el.onclick = null; res(); };
+    el.onclick = finish;
+    setTimeout(finish, 1600);
+  });
+}
+
+function openScene(who, id) {
+  S.scene = {who, id};
+  const sc = dev(who).querySelector('.scene');
+  sc.innerHTML = `<div class="phys">${SCREENS[id].html()}</div>`;
+  sc.classList.add('on');
+  render(who, false);
+}
+function closeScene() {
+  if (!S.scene) return;
+  const sc = dev(S.scene.who).querySelector('.scene');
+  sc.classList.remove('on'); sc.innerHTML = '';
+  S.scene = null;
+}
+
+function setActive(who) {
+  S.active = who; S.badge[who] = false;
+  document.querySelectorAll('.device').forEach(d => d.classList.toggle('active', d.id === who));
+  renderRoles();
+}
+function renderRoles() {
+  document.querySelectorAll('[data-role]').forEach(b => {
+    b.classList.toggle('on', b.dataset.role === S.active);
+    b.classList.toggle('dot', !!S.badge[b.dataset.role]);
+  });
+}
+
+let toastTimer;
+function toast(text, ms = 2600) {
+  const t = document.getElementById('toast');
+  t.textContent = text; t.classList.add('on');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), ms);
+}
+
+function start(scn, guest) {
+  if (S) closeScene();
+  document.getElementById('tj').classList.remove('on');
+  document.getElementById('fx').innerHTML = '';
+  document.querySelectorAll('.flyer').forEach(f => f.remove());
+  S = newState(scn, guest);
+  document.getElementById('scenario').value = scn;
+  render('dm', true); render('an', true);
+  setActive(S.active);
+}
+
+// Масштаб: телефоны целиком помещаются в окно ноутбука; на узком экране – один телефон (см. @media в стилях)
+function layout() {
+  const w = innerWidth, h = innerHeight;
+  const top = document.querySelector('.top').offsetHeight;
+  document.documentElement.style.setProperty('--toph', top + 'px');
+  let s = 1;
+  if (w >= 1080) s = Math.min(1, (h - top - 32) / 780, (w - 48 - 40 - 2 * 202) / (2 * 397));
+  else if (w >= 540) s = Math.min(1, (h - top - 32 - 150) / 780, (w - 32) / 397);
+  document.documentElement.style.setProperty('--s', Math.max(0.45, s).toFixed(3));
+}
+
+// ═════════ Обработка нажатий и ввода ═════════
+document.addEventListener('click', e => {
+  const role = e.target.closest('[data-role]');
+  if (role) return setActive(role.dataset.role);
+  if (e.target.closest('button[disabled]')) return;
+  const el = e.target.closest('[data-act]');
+  if (el) {
+    const who = el.closest('.device') ? el.closest('.device').id : null;
+    return ACT[el.dataset.act](el.dataset.v, who);
+  }
+  if (e.target.closest('.screen button, .screen .tabs')) toast('В прототипе работает только путь гостевого дня');
+});
+document.addEventListener('input', e => {
+  const key = e.target.dataset.bind;
+  if (!key || key === 'club') return;
+  if (key === 'phone') e.target.value = maskPhone(e.target.value);
+  S[key] = e.target.value;
+  if (S.errors[key]) {
+    delete S.errors[key];
+    const f = e.target.closest('.field');
+    f.classList.remove('bad');
+    if (f.nextElementSibling && f.nextElementSibling.classList.contains('ferr')) f.nextElementSibling.remove();
+  }
+});
+document.addEventListener('change', e => { if (e.target.dataset.bind === 'club') S.club = e.target.value; });
+
+const sel = document.getElementById('scenario');
+sel.innerHTML = Object.entries(SCENARIOS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
+sel.addEventListener('change', () => start(sel.value));
+document.getElementById('reset').addEventListener('click', () => start(S.scenario));
+addEventListener('resize', layout);
+
+layout();
+start('main', new URLSearchParams(location.search).has('guest'));
+</script>
+</body>
+</html>
